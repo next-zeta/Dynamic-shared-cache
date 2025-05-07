@@ -3,3 +3,6 @@
 !.gitignore
 test/*.txt
 test/*.bin
+test/*.exe
+test/*.bak
+test/build
