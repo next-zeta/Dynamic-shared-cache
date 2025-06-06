@@ -16,6 +16,11 @@ module tb_SimpleModule;
     integer status [NUM_FILES];
     integer test_case_count = 0;
 
+    logic [31:0] bitmap_vector;
+    logic [4:0]  sram_id [31:0];
+    logic [31:0] bitmap_add_array;
+    logic        alloc_valid;
+
     // 实例化被测试模块（假设为 test_i，需替换为实际模块名）
     test_i uut (
         .clk(clk),
@@ -35,6 +40,7 @@ module tb_SimpleModule;
         rst_n = 0;
         #(CLK_PERIOD * 5); // 复位 5 个时钟周期
         rst_n = 1;
+        alloc_valid = 1;
     end
 
     // 测试序列
@@ -78,7 +84,7 @@ module tb_SimpleModule;
             $display("Test Case %0d, Time=%0t: test_input=%b", 
                      test_case_count, $time, test_input);
             test_case_count++;
-            repeat(1) @(posedge clk); // 等待三个时钟周期
+            repeat(1) @(posedge clk); // 等待一个时钟周期
         end
 
         // 关闭所有文件
@@ -89,6 +95,30 @@ module tb_SimpleModule;
                  $time, test_case_count);
         // 不结束仿真，继续运行
         forever @(posedge clk);
+    end
+
+    generate
+        for (genvar i = 0; i < 32; i++) begin : bitmap_gen
+            bitmap #(
+                .SRAM_ID(i)
+            ) u_bitmap (
+                .clk(clk),
+                .rst_n(rst_n),
+                .alloc_valid(alloc_valid),
+                .sram_id(sram_id[i]),
+                .bitmap_add(bitmap_add_array[i])
+            );
+        end
+    endgenerate
+
+    always_comb begin
+        bitmap_vector = 32'b0;  // 默认全0
+        for (int i = 0; i < 32; i++) begin
+            // 若 bitmap_add_array[i] 为1，将其置于 bitmap_vector[sram_id[i]] 位置
+            if (bitmap_add_array[i] && sram_id[i] < 32) begin
+                bitmap_vector[sram_id[i]] = 1'b1;
+            end
+        end
     end
 
     // 断言：验证每位 1 连续至少 5 次
